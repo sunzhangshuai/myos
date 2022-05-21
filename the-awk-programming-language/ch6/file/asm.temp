@@ -1,0 +1,12 @@
+ld	zero
+st	sum
+get	
+jz	done
+add	sum
+st	sum
+j	loop
+ld	sum
+put	
+halt	
+const	0
+const	

@@ -1,0 +1,20 @@
+expression -> num Symbol expression( 10
+expression -> num Symbol num 1
+expression -> expression Symbol num 1
+expression( -> ( num Symbol num ) 10
+expression( -> ( num Symbol expression( ) 10
+expression( -> ( expression Symbol num ) 10
+num -> 1 1
+num -> 2 1
+num -> 3 1
+num -> 4 1
+num -> 5 1
+num -> 6 1
+num -> 7 1
+num -> 8 1
+num -> 9 1
+Symbol -> + 1
+Symbol -> - 1
+Symbol -> * 1
+Symbol -> / 1
+Symbol -> % 1

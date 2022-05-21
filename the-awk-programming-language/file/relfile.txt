@@ -1,0 +1,17 @@
+file/countries.txt:
+	country
+	area
+	population
+	continent
+file/capitals.txt:
+	country
+	capital
+file/cc.txt:
+	country
+	area
+	population
+	continent
+	capital
+	!sort file/countries.txt > file/temp.countries.txt
+	!sort file/capitals.txt > file/temp.capitals.txt
+	!awk -f ch4/join.awk file/temp.countries.txt file/temp.capitals.txt > file/cc.txt
