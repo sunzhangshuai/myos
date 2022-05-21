@@ -1,0 +1,13 @@
+USSR	1	0.1	Asia
+Canada	1	1	North America
+China	1	1	Asia
+England	1	a	Europe
+
+USA	1	1	North America
+Brazil	1	1	South America
+India	1	1	Asia
+Mexico	1	1	North America
+France	1	1	Europe
+Japan	1	1	Asia
+Germany	1	1	Europe
+England	1	1	Europe

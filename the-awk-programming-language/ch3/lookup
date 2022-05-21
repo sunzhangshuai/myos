@@ -1,0 +1,29 @@
+awk '
+    BEGIN {
+        RS = ""
+        FS = "\n"
+        OFS = "\n"
+        ORS = "\n\n"
+        if (ARGC != 4) {
+            exit
+        }
+        key = ARGV[2]
+        ARGV[2] = ""
+        value = ARGV[3]
+        ARGV[3] = ""
+    }
+    {
+        check = 0
+        for (i = 1; i <= NF; i++) {
+            split($i, f, "\t")
+
+            if (f[1] == key && f[2] == value) {
+                check = 1
+                break
+            }
+        }
+        if (check) {
+            print $0
+        }
+    }
+' ch3/file/lookuptest.txt $*

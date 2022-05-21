@@ -1,0 +1,3 @@
+{
+    print FILENAME, $0
+}

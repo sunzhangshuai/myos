@@ -1,0 +1,5 @@
+0 -1 atan2 pi=
+pi
+355 113 / x= x
+x pi /
+2 sqrt

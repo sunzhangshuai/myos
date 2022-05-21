@@ -1,0 +1,32 @@
+begin-end.awk # 将字段字割符设置为制表符 (\t), 并在输出之前打印标题。
+begin-end.awk # 每一列都刚 好与标题的列表头对齐。
+begin-end.awk # 打印总和。
+begin-end.awk BEGIN {
+begin-end.awk     FS = "\t"
+begin-end.awk     printf("%10s %6s %5s %20s\n\n", "country", "area", "pop", "continent")
+begin-end.awk }
+begin-end.awk {
+begin-end.awk     printf("%10s %6s %5s %20s\n", $1, $2, $3, $4)
+begin-end.awk     area += $2
+begin-end.awk     pop += $3
+begin-end.awk }
+begin-end.awk END {
+begin-end.awk     printf("\n %15s：%6s %15s：%5s\n", "total area", area, "total pop", pop)
+begin-end.awk     print FNR
+begin-end.awk }
+field # field - print named fields of each input line
+field #   usage:  field n n n ... file file file ...
+field awk '
+field      BEGIN {
+field         for (i = 1; ARGV[i] ~ /^[0-9]+$/; i++) { # collect numbers
+field             fld[++nf] = ARGV[i]
+field 			ARGV[i] = ""
+field 		}
+field         if (i >= ARGC)   # no file names so force stdin
+field             ARGV[ARGC++] = "-"
+field      }
+field      {
+field         for (i = 1; i <= nf; i++)
+field             printf("%s%s", $fld[i], i < nf ? " " : "\n")
+field      }
+field ' $*

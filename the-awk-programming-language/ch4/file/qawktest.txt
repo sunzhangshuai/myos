@@ -1,0 +1,5 @@
+$continent ~ /Asia/ { print $country, $population }
+
+{ print $country, $population, $capital }
+
+{ area += $area }; END { print area/NR }
