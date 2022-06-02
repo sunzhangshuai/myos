@@ -3,4 +3,4 @@
 - [x] AWK程序设计语言
 - [x] Sed and Awk 101 Hacks
 - [ ] 计算机组成与设计
-
+- [ ] https://github.com/izackwu/TeachYourselfCS-CN/blob/master/TeachYourselfCS-CN.md
