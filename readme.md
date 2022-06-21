@@ -2,5 +2,6 @@
 - [ ] Linux Shell脚本攻略
 - [x] AWK程序设计语言
 - [x] Sed and Awk 101 Hacks
-- [ ] 计算机组成与设计
-- [ ] https://github.com/izackwu/TeachYourselfCS-CN/blob/master/TeachYourselfCS-CN.md
+- [x] 计算机组成与设计
+- [x] [操作系统导论](https://github.com/sunzhangshuai/Operating-Systems-Three-Easy-Pieces-NOTES)
+- [ ] [自学计算机科学](https://github.com/izackwu/TeachYourselfCS-CN/blob/master/TeachYourselfCS-CN.md)
