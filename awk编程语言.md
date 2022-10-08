@@ -2935,3 +2935,5 @@ function rtsort(node,     i, s) {
     pncnt++ # count nodes printed
 }
 ```
+
+select * from t_bring_new_activity where dept_code like '%16%' or dept_code like'%19%'
