@@ -16,6 +16,7 @@ var seed8 = flag.Int64("s", 0, "随机种子")
 var numthreads = flag.Int("t", 2, "线程数")
 var progfile = flag.String("p", "", "源程序 (in .s)")
 var intfreq = flag.Int("i", 50, "中断周期")
+var procsched = flag.String("P", "", "准确控制何时运行哪个线程")
 var intrand = flag.Bool("r", false, "中断周期是否随机")
 var argvStr = flag.String("a", "", "逗号分隔每个线程参数(例如: ax=1,ax=2 设置线程0 ax 寄存器为1,线程1 ax 寄存器为2)，通过冒号分隔列表为每个线程指定多个寄存器(例如，ax=1:bx=2,cx=3设 置线程0 ax和bx，对于线程1只设置cx)")
 var loadaddr = flag.Int("l", 1000, "加载代码的地址")
@@ -25,6 +26,7 @@ var regtraceStr = flag.String("R", "", "以逗号分隔的要跟踪的寄存器�
 var cctrace = flag.Bool("C", false, "是否跟踪条件代码(condition codes)")
 var printstats = flag.Bool("S", false, "打印额外状态")
 var verbose1 = flag.Bool("v", false, "打印额外信息")
+var headercount = flag.Int("H", -1, "打印行标题的频率")
 var solve8 = flag.Bool("c", false, "计算结果")
 
 const (
@@ -44,6 +46,8 @@ const (
 	REG_BX
 	REG_CX
 	REG_DX
+	REG_EX
+	REG_FX
 	REG_SP
 	REG_BP
 )
@@ -58,7 +62,7 @@ func doSpace(howmuch int) {
 // zassert 断言
 func zassert(cond bool, str string) {
 	if !cond {
-		fmt.Println("出错了::", str)
+		fmt.Println("出错了:", str)
 		os.Exit(1)
 	}
 	return
@@ -81,11 +85,12 @@ type Cpu struct {
 	regNames   map[string]int      // 寄存器名称映射
 	registers  map[int]int         // 寄存器列表
 	regTrace   []int               // 要监控的寄存器列表
+	hdrCount   int                 // 打印行标题的频率
 	PC         int                 // 程序计数器
 }
 
 // NewCPU 获取新的cpu
-func NewCPU(memSize int, memtrace []string, regtrace []string, cctrace, compute, verbose bool) *Cpu {
+func NewCPU(memSize int, memtrace []string, regtrace []string, cctrace, compute, verbose bool, hdrCount int) *Cpu {
 	ret := Cpu{
 		maxMemory: memSize * 1024,
 		memTrace:  memtrace,
@@ -94,17 +99,20 @@ func NewCPU(memSize int, memtrace []string, regtrace []string, cctrace, compute,
 		compute:   compute,
 		verbose:   verbose,
 		condType:  []int{COND_GT, COND_GTE, COND_LT, COND_LTE, COND_EQ, COND_NEQ},
-		regNums:   []int{REG_ZERO, REG_AX, REG_BX, REG_CX, REG_DX, REG_SP, REG_BP},
+		regNums:   []int{REG_ZERO, REG_AX, REG_BX, REG_CX, REG_DX, REG_EX, REG_FX, REG_SP, REG_BP},
 		regNames: map[string]int{
 			"zero": REG_ZERO,
 			"ax":   REG_AX,
 			"bx":   REG_BX,
 			"cx":   REG_CX,
 			"dx":   REG_DX,
+			"ex":   REG_EX,
+			"fx":   REG_FX,
 			"sp":   REG_SP,
 			"bp":   REG_BP,
 		},
-		pMemory: make(map[int]string),
+		hdrCount: hdrCount,
+		pMemory:  make(map[int]string),
 	}
 	ret.conditions = make(map[int]bool, len(ret.condType))
 	ret.memory = make(map[int]interface{}, ret.maxMemory)
@@ -277,6 +285,13 @@ func (c *Cpu) moveR2R(src, dst int) int {
 	return 0
 }
 
+// leaM2R 加载有效地址（除了内存值的最终更改以外的所有内容）
+func (c *Cpu) leaM2R(value, reg1, reg2, dst int) int {
+	tmp := value + c.registers[reg1] + c.registers[reg2]
+	c.registers[dst] = tmp
+	return 0
+}
+
 // addI2R 寄存器加立即数
 func (c *Cpu) addI2R(src, dst int) int {
 	c.registers[dst] += src
@@ -298,6 +313,12 @@ func (c *Cpu) subI2R(src, dst int) int {
 // subR2R 寄存器的值减一个寄存器值
 func (c *Cpu) subR2R(src, dst int) int {
 	c.registers[dst] -= c.registers[src]
+	return 0
+}
+
+// negR 寄存器值取反
+func (c *Cpu) negR(src int) int {
+	c.registers[src] = -c.registers[src]
 	return 0
 }
 
@@ -498,7 +519,8 @@ func (c *Cpu) getArg(arg string) (interface{}, string) {
 			value, ok := c.vars[arg]
 			zassert(ok, fmt.Sprintf("变量 %s 未定义", arg))
 			return fmt.Sprintf("%d,%d,%d", value, c.getRegNum("zero"), c.getRegNum("zero")), "TYPE_MEMORY"
-		} else if match, _ := regexp.MatchString(`^[\d-]+$`, string(arg[0])); match {
+		} else if match, _ = regexp.MatchString(`^[\d-]+$`, string(arg[0])); match {
+			// 变量
 			// 内存地址
 			neg := 1
 			if arg[0] == '-' {
@@ -548,11 +570,12 @@ func (c *Cpu) load(infile string, loadaddr int) {
 		if line == "" {
 			continue
 		}
+
 		line = strings.Split(line, "#")[0]
 		if len(strings.Trim(line, "")) == 0 {
 			continue
 		}
-		tmp := strings.SplitN(line, " ", 2)
+		tmp := strings.Split(line, " ")
 		if len(tmp) == 0 {
 			continue
 		}
@@ -560,6 +583,10 @@ func (c *Cpu) load(infile string, loadaddr int) {
 		// 只注意标签和变量
 		if tmp[0] == ".var" {
 			c.vars[tmp[1]] = data
+			if len(tmp) == 3 {
+				mul, _ := strconv.Atoi(tmp[2])
+				data += mul
+			}
 			data += 4
 			zassert(data < bpc, "静态数据导致加载地址溢出")
 			if c.verbose {
@@ -609,7 +636,7 @@ func (c *Cpu) load(infile string, loadaddr int) {
 		// 区分操作码
 		switch opcode {
 		case "mov": // load 或 store
-			rtmp := strings.SplitN(tmp[1], ",", 2)
+			rtmp := strings.SplitN(tmp[1], ", ", 2)
 			zassert(len(rtmp) == 1 || len(rtmp) == 2, fmt.Sprintf("mov：需要两个参数，用逗号分隔[%s]", line))
 			src, stype := c.getArg(strings.Trim(rtmp[0], " "))
 			dst, dtype := c.getArg(strings.Trim(rtmp[1], " "))
@@ -619,7 +646,7 @@ func (c *Cpu) load(infile string, loadaddr int) {
 			} else if stype == "TYPE_IMMEDIATE" && dtype == "TYPE_IMMEDIATE" {
 				fmt.Println("mov 错误：两个立即数")
 				os.Exit(1)
-			} else if stype == "TYPE_IMMEDIATE" && dtype == "TYPE_IMMEDIATE" {
+			} else if stype == "TYPE_IMMEDIATE" && dtype == "TYPE_REGISTER" {
 				c.memory[pc] = func() int {
 					return c.moveI2R(src.(int), dst.(int))
 				}
@@ -653,6 +680,26 @@ func (c *Cpu) load(infile string, loadaddr int) {
 				}
 			} else {
 				zassert(false, "格式错误的mov指令")
+			}
+		case "lea": // 加载
+			rtmp := strings.SplitN(tmp[1], ", ", 2)
+			zassert(len(rtmp) == 1 || len(rtmp) == 2, fmt.Sprintf("lea：需要两个参数，用逗号分隔[%s]", line))
+			src, stype := c.getArg(strings.Trim(rtmp[0], " "))
+			dst, dtype := c.getArg(strings.Trim(rtmp[1], " "))
+			zassert(stype == "TYPE_MEMORY" && dtype == "TYPE_REGISTER", "格式错误的lea指令（应为内存地址源以注册目标）")
+			tmp = strings.Split(src.(string), ",")
+			c.memory[pc] = func() int {
+				i1, _ := strconv.Atoi(tmp[0])
+				i2, _ := strconv.Atoi(tmp[1])
+				i3, _ := strconv.Atoi(tmp[2])
+				return c.leaM2R(i1, i2, i3, dst.(int))
+			}
+		case "neg": // 取反
+			zassert(len(tmp) == 2, fmt.Sprintf("neg：需要两个参数，用逗号分隔[%s]", line))
+			dst, dtype := c.getArg(strings.Trim(tmp[1], " "))
+			zassert(dtype == "TYPE_REGISTER", "只能在寄存器中")
+			c.memory[pc] = func() int {
+				return c.negR(dst.(int))
 			}
 		case "pop":
 			if len(tmp) == 1 {
@@ -864,17 +911,17 @@ func (c *Cpu) load(infile string, loadaddr int) {
 func (c *Cpu) printHeaders(procs *ProcessList) {
 	if len(c.memTrace) > 0 {
 		for _, m := range c.memTrace {
-			fmt.Printf("%5s", m)
+			fmt.Printf("%10s", m)
 		}
+		fmt.Printf(" ")
 	}
-	fmt.Printf(" ")
 
 	if len(c.regTrace) > 0 {
 		for _, r := range c.regTrace {
 			fmt.Printf("%5s", c.getRegName(r))
 		}
+		fmt.Printf(" ")
 	}
-	fmt.Printf(" ")
 
 	if c.ccTrace {
 		fmt.Printf(">= >  <= <  != ==")
@@ -894,16 +941,16 @@ func (c *Cpu) printTrace(newline bool) {
 			if c.compute {
 				if match, _ := regexp.MatchString(`^[\d-]+$`, m); match {
 					idx, _ := strconv.Atoi(m)
-					fmt.Printf("%5d", c.memory[idx])
+					fmt.Printf("%10d", c.memory[idx])
 				} else {
-					fmt.Printf("%5d", c.vars[m])
+					fmt.Printf("%10d", c.memory[c.vars[m]])
 				}
 			} else {
-				fmt.Printf("%5s", "?")
+				fmt.Printf("%10s", "?")
 			}
 		}
+		fmt.Printf(" ")
 	}
-	fmt.Printf(" ")
 
 	if len(c.regTrace) > 0 {
 		for _, r := range c.regTrace {
@@ -913,8 +960,8 @@ func (c *Cpu) printTrace(newline bool) {
 				fmt.Printf("%5s", "?")
 			}
 		}
+		fmt.Printf(" ")
 	}
-	fmt.Printf("\t")
 
 	if c.ccTrace {
 		for _, cond := range c.getCondList() {
@@ -941,6 +988,11 @@ func (c *Cpu) setInt(intfreq int, intrand bool) int {
 
 // run 运行指令
 func (c *Cpu) run(procs *ProcessList, intfreq int, intrand bool) int {
+	if procs.manual {
+		intfreq = 1
+		intrand = false
+	}
+
 	// 中断
 	interrupt := c.setInt(intfreq, intrand)
 	icount := 0
@@ -948,6 +1000,11 @@ func (c *Cpu) run(procs *ProcessList, intfreq int, intrand bool) int {
 	c.printTrace(true)
 
 	for true {
+		if c.hdrCount > 0 && icount%c.hdrCount == 0 && icount > 0 {
+			c.printHeaders(procs)
+			c.printTrace(true)
+		}
+
 		tid := procs.getCurr().getTid()
 		precPc := c.PC
 		instruction := c.memory[c.PC]
@@ -982,17 +1039,21 @@ func (c *Cpu) run(procs *ProcessList, intfreq int, intrand bool) int {
 
 		interrupt--
 		if interrupt == 0 || rc == -2 {
+			curr := procs.getCurr()
 			interrupt = c.setInt(intfreq, intrand)
 			procs.save()
 			procs.next()
 			procs.restore()
 
-			c.printTrace(false)
+			next := procs.getCurr()
 
-			for i := 0; i < procs.getNum(); i++ {
-				fmt.Printf("----- Interrupt ----- ")
+			if !procs.isManual() || (procs.isManual() && curr != next) {
+				c.printTrace(false)
+				for i := 0; i < procs.getNum(); i++ {
+					fmt.Printf("----- Interrupt ----- ")
+				}
+				fmt.Println()
 			}
-			fmt.Println()
 		}
 	}
 	return 0
@@ -1078,23 +1139,56 @@ func (p *Process) isDone() bool {
 
 // ProcessList 线程列表
 type ProcessList struct {
-	plist  []*Process
-	curr   int // 当前线程
-	active int // 活跃的线程数
+	plist     []*Process
+	curr      int // 当前线程
+	active    int // 活跃的线程数
+	procSched []int
+	manual    bool // 手动确定
 }
 
 // NewProcessList 新的线程列表
 func NewProcessList() *ProcessList {
 	return &ProcessList{
-		plist:  make([]*Process, 0),
-		curr:   0,
-		active: 0,
+		plist:     make([]*Process, 0),
+		procSched: make([]int, 0),
+		curr:      0,
+		active:    0,
 	}
+}
+
+// finalize 最终执行
+func (l *ProcessList) finalize(procSched string) {
+	if procSched == "" {
+		for i := range l.plist {
+			l.procSched = append(l.procSched, i)
+		}
+		l.curr = 0
+		l.restore()
+		return
+	}
+
+	l.manual = true
+	check := make(map[int]bool)
+
+	for i := 0; i < len(procSched); i++ {
+		p, _ := strconv.Atoi(string(procSched[i]))
+		if p >= l.getNum() {
+			zassert(false, fmt.Sprintf("错误的调度：不能包含不存在的线程【%d】", p))
+		}
+		l.procSched = append(l.procSched, p)
+		check[p] = true
+	}
+
+	if len(check) != l.active {
+		zassert(false, fmt.Sprintf("错误的调度：不包括所有进程【%s】", procSched))
+	}
+	l.curr = 0
+	l.restore()
 }
 
 // done 线程结束
 func (l *ProcessList) done() {
-	l.plist[l.curr].setDone()
+	l.getCurr().setDone()
 	l.active--
 }
 
@@ -1114,9 +1208,14 @@ func (l *ProcessList) add(p *Process) {
 	l.plist = append(l.plist, p)
 }
 
+// isManual 是否手动调度
+func (l *ProcessList) isManual() bool {
+	return l.manual
+}
+
 // getCurr 获取当前线程
 func (l *ProcessList) getCurr() *Process {
-	return l.plist[l.curr]
+	return l.plist[l.procSched[l.curr]]
 }
 
 // save 保存上下文
@@ -1131,14 +1230,14 @@ func (l *ProcessList) restore() {
 
 // next 下一个线程
 func (l *ProcessList) next() {
-	for i := l.curr + 1; i < len(l.plist); i++ {
-		if !l.plist[i].isDone() {
+	for i := l.curr + 1; i < len(l.procSched); i++ {
+		if !l.plist[l.procSched[i]].isDone() {
 			l.curr = i
 			return
 		}
 	}
 	for i := 0; i < l.curr; i++ {
-		if !l.plist[i].isDone() {
+		if !l.plist[l.procSched[i]].isDone() {
 			l.curr = i
 			return
 		}
@@ -1153,6 +1252,7 @@ func main() {
 	fmt.Println("选项 线程数：", *numthreads)
 	fmt.Println("选项 中断周期：", *intfreq)
 	fmt.Println("选项 中断周期是否随机", *intrand)
+	fmt.Println("选项 进程控制：", *procsched)
 	fmt.Println("选项 线程参数：", *argvStr)
 	fmt.Println("选项 加载代码的地址：", *loadaddr)
 	fmt.Println("选项 地址空间大小(KB)：", *memsize)
@@ -1176,7 +1276,7 @@ func main() {
 		regtrace = strings.Split(*regtraceStr, ",")
 	}
 
-	cpu := NewCPU(*memsize, memtrace, regtrace, *cctrace, *solve8, *verbose1)
+	cpu := NewCPU(*memsize, memtrace, regtrace, *cctrace, *solve8, *verbose1, *headercount)
 	cpu.load(*progfile, *loadaddr)
 
 	procs := NewProcessList()
@@ -1195,7 +1295,7 @@ func main() {
 		pid++
 	}
 
-	procs.restore()
+	procs.finalize(*procsched)
 
 	satrt := time.Now()
 	ic := cpu.run(procs, *intfreq, *intrand)
