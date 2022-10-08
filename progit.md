@@ -502,23 +502,24 @@ git log
     git log --pretty=format:"%h - %an, %ar : %s"
     ```
 
-    > | 选项   | 说明                          |
-    > | :--- | :-------------------------- |
-    > | %H   | 提交的完整hash值                  |
-    > | %h   | 提交的简写哈希值                    |
-    > | %T   | 树的完整哈希值                     |
-    > | %t   | 树的简写哈希值                     |
-    > | %P   | 父提交的完整哈希值                   |
-    > | %p   | 父提交的简写哈希值                   |
-    > | %an  | 作者名字                        |
-    > | %ae  | 作者的电子邮箱                     |
+    > | 选项 | 说明                                          |
+    > | :--- | :-------------------------------------------- |
+    > | %H   | 提交的完整hash值                              |
+    > | %h   | 提交的简写哈希值                              |
+    > | %T   | 树的完整哈希值                                |
+    > | %t   | 树的简写哈希值                                |
+    > | %P   | 父提交的完整哈希值                            |
+    > | %p   | 父提交的简写哈希值                            |
+    > | %an  | 作者名字                                      |
+    > | %ae  | 作者的电子邮箱                                |
     > | %ad  | 作者修订日期（可以用 --date=选项 来定制格式） |
-    > | %ar  | 作者修订日期，按多久以前的方式显示           |
-    > | %cn  | 提交者的名字                      |
-    > | %ce  | 提交者的电子邮件地址                  |
-    > | %cd  | 提交日期                        |
-    > | %cr  | 提交日期（距今多长时间）                |
-    > | %s   | 提交说明                        |
+    > | %ar  | 作者修订日期，按多久以前的方式显示            |
+    > | %cn  | 提交者的名字                                  |
+    > | %ce  | 提交者的电子邮件地址                          |
+    > | %cd  | 提交日期                                      |
+    > | %cr  | 提交日期（距今多长时间）                      |
+    > | %s   | 提交说明                                      |
+    > | %G?  | 验证GPG签名结果                               |
 
 
 - **显示分支&合并历史**
@@ -547,6 +548,12 @@ git log
 
   ```shell
   git log --decorate
+  ```
+
+- **查看及验证GPG签名**
+
+  ```shell
+  git log --show-signature
   ```
 
 # 标签
@@ -933,10 +940,10 @@ ssh-keygen -o
 
 ### 单个修订版本
 
-- **表示方法**
+- **表示方法【老孙说会了，下次复习不要打脸】**
 
   ```shell
-  # 查看分支的顶端在昨天指向了哪个提交
+  # 查看分支在昨天最近的提交
   <branceName>@{yesterday}
   # SHA-1
   SHA-1|SHA-1至少4个字符，且没有歧义
@@ -944,13 +951,12 @@ ssh-keygen -o
   HEAD@{n}
   # 第一个父提交
   HEAD^
-  # 第一个父提交
   HEAD~
   # 第二个父提交
-  HEAD^^
   HEAD^2
   # 第一父提交的第一父提交
   HEAD~~
+  HEAD^^
   HEAD~2
   # 第一父提交的第一父提交的第一父提交的第二个父提交
   HEAD~3^2
@@ -968,7 +974,7 @@ ssh-keygen -o
   ```sh
   git log
   # 显示简短且唯一的sha1值； 默认使用七个字符。
-  git log --abbrev-commit --pretty=online 
+  git log --abbrev-commit --pretty=oneline 
   ```
 
 - **查看引用日志**
@@ -1070,3 +1076,295 @@ git add --patch
 > e - 编辑当前区域
 >
 > ? - 打印帮助
+
+## 清理与贮藏
+
+### 贮藏
+
+> 贮藏的区域分为**暂存区**和**工作区**。
+
+- **贮藏**
+
+  ```shell
+  # 贮藏 已跟踪 的 暂存区 和 工作区 文件
+  git stash [push]
+  
+  # 贮藏 已跟踪 的 暂存区 和 工作区 文件，自定义注释
+  git stash save "comment"
+  
+  # 贮藏 已跟踪 的 工作区 文件
+  git stash --keep-index
+  
+  # 贮藏 已跟踪 和 未跟踪 文件，不包含忽略文件
+  git stash -u[--include-untracked]
+  
+  # 贮藏 已跟踪 和 未跟踪 文件，包含忽略文件
+  git stash -a[--all]
+  ```
+
+- **贮藏列表**
+
+  ```shell
+  git stash list
+  ```
+
+- **应用贮藏**
+
+  ```shell
+  # 应用 最近一个贮藏，暂存区 和 工作区 都应用到 工作区
+  git stash apply
+  
+  # 应用 指定贮藏，暂存区 和 工作区 都应用到 工作区
+  git stash applay <stashname>
+  
+  # 应用 最近一个贮藏，暂存区 应用到 暂存区， 工作区 都应用到 工作区
+  git stash apply --index
+  
+  # 应用 最近一个贮藏，并从 贮藏列表 删除。
+  git stash pop
+  
+  # 交互式 选择性贮藏
+  git stash --patch
+  
+  # 在 新分支 应用 最近一个贮藏，并删除贮藏
+  git stash branch <branchname>
+  ```
+
+- **删除贮藏**
+
+  ```shell
+  # 删除 最近一个 贮藏
+  git stash drop
+  
+  # 删除 指定 贮藏
+  git stash drop <stashname>
+  
+  # 清空贮藏
+  git stash clear
+  ```
+
+- **显示贮藏文件**
+
+  ```shell
+  # 展示 最近一个 贮藏 的文件
+  git stash show
+  
+  # 展示 最近一个 贮藏 的文件修改内容
+  git stash show -p
+  
+  # 展示 指定 贮藏 的文件
+  git stash show <stashname>
+  
+  # 展示 指定 贮藏 的文件修改内容
+  git stash show <stashname> -p
+  ```
+
+### 清理
+
+**清理未跟踪文件**。
+
+```shell
+# 交互式清理 未跟踪 文件
+git clean -i
+
+# 强制清理 未跟踪 文件
+git clean -f
+
+# 查看会删除哪些文件，但不真实删除
+git clean -n
+
+# 删除 未跟踪的 空的子目录 和 文件
+git clean -d -[i/f/n]
+
+# 删除 忽略 文件
+git clean -x -[i/f/n]
+```
+
+## GPG
+
+> GNU Privacy Guard，GNU隐私保护，是一种基于密钥的加密方式，主要用于文件加密。
+
+- **生成密钥**
+
+  ```shell
+  gpg --gen-key # 交互式地输入真实姓名、邮箱
+  ```
+
+- **查看已有密钥**
+
+  ```shell
+  # 查看公钥和其签名
+  gpg -k --list-sigs
+  
+  # 查看私钥和其签名
+  gpg -K --list-sigs
+  ```
+
+  - **密钥类型**：pub/sub/sec/ssb
+    - pub：公钥
+    - sec：私钥
+    - sub：子密钥的公钥
+    - ssb：子密钥的私钥
+  - **密钥用途**：E/S/C/A
+    - *Encryption*：加密。
+    - *Signing*：签名。
+    - *Certification*：认证其他子密钥或 uid。
+    - *Authentication*：身份认证，例如用于 SSH 登录。
+
+- **导出密钥**
+
+  ```shell
+  # 导出公钥 --armor 是可视化
+  gpg --armor --export <签名>
+  
+  # 导出私钥
+  gpg --armor --export-secret-keys <签名>
+  
+  # 导出子密钥
+  gpg --armor --export-secret-subkeys <签名>
+  ```
+
+- **导入密钥**
+
+  ```shell
+  gpg --import <gpg文件名>
+  ```
+
+- **删除密钥**
+
+  ```shell
+  # 删除公钥
+  gpg --delete-keys <签名>
+  
+  # 删除私钥
+  gpg --delete-secret-keys <签名>
+  
+  # 删除公钥和私钥
+  gpg --delete-secret-and-public-keys <签名>
+  ```
+
+- **编辑密钥**
+
+  ```shell
+  gpg --edit-key <签名>
+  ```
+
+- **签署密钥**
+
+  ```shell
+  git config --global user.signingkey <签名>
+  ```
+
+- **签署标签**
+
+  ```shell
+  git tag -s <tagName> -m 'comment'
+  ```
+
+- **签署提交**
+
+  ```shell
+  git commit -m 'comment' -S 
+  
+  # 自动签署，配置后可不加-S
+  git config --global commit.gpgsign true
+  ```
+
+## 搜索
+
+### 文件查找
+
+```shell
+# 查找工作目录的文件
+git grep {关键字}
+
+# 查找指定版本的文件
+git grep {关键字} {版本号}
+
+# 输出匹配的行号
+git grep -n {关键字}
+
+# 输出每个文件包含了多少个匹配
+git grep -c {关键字}
+
+# 输出每一个匹配的字符串所在的方法或函数
+git grep -p {关键字}
+
+# 多条件查询
+git grep -e {关键字} --and -e {关键字}
+git grep -e {关键字} <--or> -e {关键字}
+```
+
+### 日志搜索
+
+```shell
+# 显示新增和删除关键字的提交
+git log -S {关键字}
+
+# 显示一行或一个函数的提交历史
+git log -L :关键字:文件名
+```
+
+## 重写历史
+
+### 修改最近一次提交
+
+```shell
+# 修改内容，注释
+git commit --amend
+
+# 修改内容&不修改注释
+git commit --amend --no-edit
+```
+
+### 修改最近多次提交
+
+#### 修改提交信息
+
+1. **选择要修改的提交**。
+
+   ```shell
+   git rebase -i {要修改的最近一次提交的父提交}
+   ```
+
+2. 将要修改的提交 **`pick` 改成 `edit`**，并保存退出。
+
+   ```shell
+   pick f7f3f6d changed my name a bit
+   edit 310154e updated README formatting and added blame
+   pick a5f4a0d added cat-file
+   ```
+
+3. **修改提交信息**，编辑提交注释并保存退出。
+
+   ```shell
+   git commit --amend
+   ```
+
+4. **处理下一个提交信息**，没有则结束。
+
+   ```shell
+   git rebase --continue
+   ```
+
+#### 修改提交顺序
+
+```
+pick f7f3f6d changed my name a bit
+pick 310154e updated README formatting and added blame
+pick a5f4a0d added cat-file
+```
+
+改成如下，实现**修改顺序**并完全**移除**想要移除的提交。
+
+```
+pick 310154e updated README formatting and added blame
+pick f7f3f6d changed my name a bit
+```
+
+#### 合并多个提交
+
+将要合并的多个提交，除第一个，其他提交的 **`pick` 改成 `squash`**。
+
+
+
