@@ -1366,5 +1366,37 @@ pick f7f3f6d changed my name a bit
 
 将要合并的多个提交，除第一个，其他提交的 **`pick` 改成 `squash`**。
 
+#### 拆分提交
 
+1. 选择**要拆分**的提交。
+
+   ```shell
+   git rebase -i {要拆分的最近一次提交的父提交}
+   ```
+
+2. 将要拆分的提交 **`pick` 改成 `edit`**，并保存退出。
+
+3. **撤销**当前提交。
+
+   ```shell
+   git reset HEAD^
+   ```
+
+4. **分批**提交。
+
+5. **处理下一个提交信息**，没有则结束。
+
+   ```shell
+   git rebase --continue
+   ```
+
+### Filter-branch
+
+- **修改已提交的邮箱**
+
+  ```shell
+  git filter-branch --commit-filter 'GIT_AUTHOR_EMAIL="zhangshuai1134@gmail.com"; git commit-tree "$@";' HEAD
+  ```
+
+  
 
