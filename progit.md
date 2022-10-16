@@ -943,6 +943,8 @@ ssh-keygen -o
 - **表示方法【老孙说会了，下次复习不要打脸】**
 
   ```shell
+  # 查看分支最近的提交
+  <branceName>
   # 查看分支在昨天最近的提交
   <branceName>@{yesterday}
   # SHA-1
@@ -1364,7 +1366,16 @@ pick f7f3f6d changed my name a bit
 
 #### 合并多个提交
 
-将要合并的多个提交，除第一个，其他提交的 **`pick` 改成 `squash`**。
+1. 方法一：将要合并的多个提交，除第一个，其他提交的 **`pick` 改成 `squash`**。
+
+2. 方法二
+
+   ```shell
+   # 1
+   git reset {要合并的第一个版本}
+   # 2
+   git commit -m "message"
+   ```
 
 #### 拆分提交
 
@@ -1398,5 +1409,51 @@ pick f7f3f6d changed my name a bit
   git filter-branch --commit-filter 'GIT_AUTHOR_EMAIL="zhangshuai1134@gmail.com"; git commit-tree "$@";' HEAD
   ```
 
-  
+
+## 重置
+
+| 树                | 用途                                 |
+| ----------------- | ------------------------------------ |
+| HEAD              | 上一次提交的快照，下一次提交的父节点 |
+| Index             | 预期的下一次提交的快照               |
+| Working Directory | 沙盒                                 |
+
+### reset
+
+#### commit level
+
+```shell
+git reset [--soft|--mixed（默认）|--hard] 修订版
+```
+
+1. 移动HEAD所指向的分支的指向。（--soft停留在这一步）
+2. 用HEAD指向的当前快照的内容更新索引。（--mixed停留在这一步）
+3. 用HEAD指向的当前快照的内容更新工作目录区。（指定--hard）
+
+#### file level
+
+```shell
+git reset filename 
+# 相当于
+git reset --mixed HEAD filename
+```
+
+1. 移动HEAD指向【跳过，因为HEAD无法同时指向两个提交中的各自一部分】。
+2. 用HEAD指向的当前快照的内容更新索引。
+
+### checkout【检出】
+
+#### commit level
+
+```shell
+# 移动HEAD自身来指向切换的分支，而不移动HEAD指向的分支
+git checkout [branch]
+```
+
+#### file level
+
+```shell
+# 用HEAD所指向的提交的文件覆盖索引区和工作目录区
+git checkout [branch] file
+```
 
