@@ -279,11 +279,11 @@ git status --short
 
 > 输出中有两栏，左栏指明了暂存区的状态，右栏指明了工作区的状态。
 >
-> `??`：新添加的未跟踪文件。<br>`A`：新添加到暂存区中的文件。<br>`M`：修改过的文件。<br>`D`：删除的文件。
+> `??`：新添加的未跟踪文件。<br>`A`：新添加到暂存区中的文件。<br>`M`：修改过的文件。<br>`D`：删除的文件。<br>`U`：文件没有被合并(你需要完成合并才能进行提交)。
 
 ## 文件查看
 
-- **未暂存的修改**：对比未暂存和已暂存。
+- **未暂存的修改**：对比 *已暂存* 和 *未暂存* 。
 
   ```shell
   git diff
@@ -940,7 +940,7 @@ ssh-keygen -o
 
 ### 单个修订版本
 
-- **表示方法【老孙说会了，下次复习不要打脸】**
+- **表示方法**
 
   ```shell
   # 查看分支最近的提交
@@ -1433,9 +1433,9 @@ git reset [--soft|--mixed（默认）|--hard] 修订版
 #### file level
 
 ```shell
-git reset filename 
+git reset {filename} 
 # 相当于
-git reset --mixed HEAD filename
+git reset --mixed HEAD {filename}
 ```
 
 1. 移动HEAD指向【跳过，因为HEAD无法同时指向两个提交中的各自一部分】。
@@ -1454,6 +1454,210 @@ git checkout [branch]
 
 ```shell
 # 用HEAD所指向的提交的文件覆盖索引区和工作目录区
-git checkout [branch] file
+git checkout [branch] {filename}
 ```
 
+## 高级合并
+
+### 合并
+
+ ```shell
+ # 合并分支
+ git merge {branchname}
+ 
+ # 合并文件
+ git merge-file -p {oursfile} {commonflie} {theirsfile} {filename}
+ ```
+
+#### 策略 -s
+
+- `Resolve`【解决】：这种策略只能合并两个分支，首先定义某个次commit为祖先为合并基础，然后执行一个直接的三方合并。
+- `Recursive`【递归】：和解决很相似，说白了就是多次的调用解决。为什么会有这个策略呢？因为解决策略，是找到两个分支的某个commit为组向才来合并的，如果某一个分支上，某一次提交【祖先或者祖先以后的提交】是merge过的，这时候，就需要递归来解决了。
+- `Octopus`【章鱼】：当需要多个分支的时候，就可以用octopus来解决，这就是来同时合并多个分支的策略。
+- `Ours`【自己的】：**假合并**。它的作用是，将另外一个分支的commit记录【log】提交过来，但是不提交文件本身。
+- `Subtree`【子树】：这种策略是在用于，当想将一个新的项目作为该项目的子项目往git上提交时可以使用，说白了就是将其当做一个子模块一般。
+
+#### 策略选项 -X
+
+- `ignore-space-change`：将一个空白符与多个连续的空白字符视作等价的。
+- `ignore-all-space`：在比较行时**完全忽略**空白修改。
+- `ours`：发生冲突时，以当前版本为准。
+- `theirs`：发生冲突时，以要合入的版本为准。
+
+### 退出合并
+
+```shell
+git merge --abort
+```
+
+> **缺点**：会尝试恢复到合并前的状态。 但在工作目录中有未储藏、未提交的修改时它不能处理。
+
+```shell
+git reset --hard HEAD
+```
+
+> 任何未提交的工作都会丢失。
+
+### 冲突
+
+#### 检出冲突
+
+- **默认**：只给出 「ours」 和 「theirs」 版本。
+
+  > ![image-20221126233353663](./imgs/合并冲突.png)
+
+- **重新检出文件**：不只给出 「ours」 和 「theirs」 版本。还给出 「base」 版本。
+
+  ```shell
+  git checkout --conflict=diff3 {filename}
+  # 设置为默认
+  git config --global merge.conflictstyle diff3
+  ```
+
+  > <img src="./imgs/重新检出文件.png" alt="image-20221126232820413" style="zoom:50%;" />
+
+#### 解决冲突
+
+##### 直接修改文件
+
+1. 修改文件。
+2. `git commit -m ""`。
+
+##### 手动文件合并
+
+1. 获取三个版本的文件，三版本文件查找方式。`1: 共同祖先`、`2: 当前分支版本`、`3: 要merge的版本`。
+
+   1. ```shell
+      git ls-files -u
+      ```
+
+      > ```text
+      > 100755 ac51efdc3df4f4fd328d1a02ad05331d8e2c9111 1 hello.rb
+      > 100755 36c06c8752c78d2aff89571132f3bf7841a7b5c3 2 hello.rb
+      > 100755 e85207e04dfdd5eb0a1e9febbc67fd837c44a1cd 3 hello.rb
+      > ```
+
+   2. ```shell
+      git show {:1:hello.rb|ac51efdc3df4f4fd328d1a02ad05331d8e2c9111}
+      git show :2:hello.rb
+      git show :3:hello.rb
+      ```
+
+2. 输入到工作目录。
+
+   ```shell
+   git show :1:hello.rb > hello.common.rb
+   ```
+
+3. 分别处理版本文件。
+
+4. 执行`git merge-file`。
+
+   ```shell
+   git merge-file -p hello.ours.rb hello.common.rb hello.theirs.rb > hello.rb
+   ```
+
+5. 查看差异。
+
+   ```shell
+   # 查看合并引入内容
+   git diff --ours
+   
+   # 查看结果与另一边的不同 【-b 可以去除空白】
+   git diff --theirs -b
+   
+   # 查看文件在两边的改动
+   git diff --base
+   ```
+
+6. 清理临时文件。
+
+   ```shell
+   git clean -f
+   ```
+
+### 撤销合并
+
+#### 本地撤销
+
+```shell
+git reset --hard HEAD~
+```
+
+#### 远程撤销
+
+```shell
+git revert -m 1 HEAD
+```
+
+> `-m`：**mainline**，表明需要被保留的父节点。`1：当前分支`、`2：merge分支`。
+>
+> **实际效果**：<img src="./imgs/撤销合并.png" alt="image-20221126233927083" style="zoom:50%;" />
+>
+> **缺点**：topic分支上的历史提交无法再被合入master。
+
+## Rerere
+
+> **reuse recorded resolution**【重用记录的解决方案】
+
+
+
+让git记住解决一个块冲突的方法，下一次遇到相同的冲突时，git可以自动解决。
+
+启动rerere功能
+
+```shell
+git config --global rerere.enabled true
+```
+
+## 子模块
+
+定义：子模块允许将一个git仓库作为另一个git仓库的子目录，将另一个仓库克隆到自己的项目中，同时还能保持提交的独立。
+
+使用步骤：
+
+1. 将一个已经存在的git仓库添加为正在工作的仓库的字模块
+
+   ```shell
+   git submodule add git仓库地址
+   ```
+
+2. .gitmodules文件：保存了项目url与已经拉取的本地目录之间的映射
+
+### 克隆含有子模块的项目
+
+1. git clone git项目地址
+2. 子目录是空的，需要执行 git submodule init
+
+## 打包
+
+网络传输git常用的方法：ssh，http
+
+git可以将它的数据打包到一个文件中。
+
+```shell
+# 将git push 命令所传输的所有内容打包成一个二进制文件，可以将文件传给其他人，然后解包到其他仓库中
+git bundle 
+```
+
+```shell
+示例：
+# 1. repo.bundle包含了所有重建该仓库master分支所需的数据
+# 如果希望这个仓库在别处被克隆，增加HEAD引用
+git bundle create repo.bundle HEAD MASTER
+# 2. 应用文件
+git clone repo.bundle repo [-b <branceName>]
+```
+
+## 替换
+
+replace命令：在git
+
+## 凭证存储
+
+```shell
+# 密码存在缓存中
+git config --gobal credential.help cache [--timeout <senconds>]
+# 密码存在文件中
+git config --gobal credential.help 'store --file <path>'
+```
