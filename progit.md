@@ -1639,6 +1639,51 @@ git config --global rerere.enabled true
 
   > 通过rerere来解决合并。
 
+## 调试工具
+
+### blame
+
+```shell
+# 查看文件每一行的最近一次提交信息
+git blame [-C] [-L startLine, endLine] {fileName}
+```
+
+> `-C`：文件有重命名，可以查看重命名前的文件的提交信息。
+>
+> `-L`：指定展示文件行的范围。
+
+### bisect
+
+> 在多次提交中二分查找到bug的第一次引入时间
+
+#### 人工查找
+
+```shell
+# 1. 启动
+git bisect start
+# 2. 告诉系统当前你所在的提交是有问题的
+git bisect bad
+# 3. 告诉bisect最后一次正常提交是哪次提交
+git bisect good <good_commit>
+# 4. git检出中间的那次提交，人工校验是否有问题，没有问题的话执行下面的命令
+git bisect good
+# 5. 继续查找，git再次检出中间的那次提交，如果有问题执行下面的命令
+git bisecr bad
+# 6. 最终找到出问题的那次提交
+```
+
+#### 脚本查找
+
+```shell
+# 1. 编写检查脚本，正常返回0，不正常返回非0
+# 2. 设置二分查找范围
+git bisect start HEAD {最后一次正常的提交}
+# 3. git自动在每个被检出的提交执行检查脚本，直到找到第一个不正常的提交
+git bisect run {检查脚本}
+```
+
+
+
 ## 子模块
 
 定义：子模块允许将一个git仓库作为另一个git仓库的子目录，将另一个仓库克隆到自己的项目中，同时还能保持提交的独立。
