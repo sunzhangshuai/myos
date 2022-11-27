@@ -1504,9 +1504,13 @@ git reset --hard HEAD
 
 - **默认**：只给出 「ours」 和 「theirs」 版本。
 
-  > ![image-20221126233353663](./imgs/合并冲突.png)
+  ```shell
+  git checkout --conflict=merge {filename}
+  ```
 
-- **重新检出文件**：不只给出 「ours」 和 「theirs」 版本。还给出 「base」 版本。
+  > <img src="./imgs/合并冲突.png" alt="image-20221127145149798" style="zoom:50%;" />
+
+- 不只给出 「ours」 和 「theirs」 版本。还给出 「base」 版本。
 
   ```shell
   git checkout --conflict=diff3 {filename}
@@ -1598,17 +1602,42 @@ git revert -m 1 HEAD
 
 ## Rerere
 
-> **reuse recorded resolution**【重用记录的解决方案】
+> **reuse recorded resolution**【重用记录的解决方案】：让git记住解决一个块冲突的方法，下一次遇到相同的冲突时，git可以自动解决。
 
-
-
-让git记住解决一个块冲突的方法，下一次遇到相同的冲突时，git可以自动解决。
-
-启动rerere功能
+### 启动
 
 ```shell
+# 全局
 git config --global rerere.enabled true
+
+# 项目：在仓库中创建 .git/rr-cache 目录
 ```
+
+### 使用场景
+
+- **保证一个长期分支会干净地合并**：偶尔合并，解决冲突，然后退出合并。
+- **用变基来替代合并**：修复冲突后，回退再使用变基。
+- **将一堆正在改进的主题分支合并到一个测试分支**：如果测试失败，可以倒回合并之前然后在去除导致测试失败的那个主题分支后重做合并，而不用再次重新解决所有的冲突。
+
+### 相关命令
+
+- ```shell
+  git rerere status
+  ```
+
+  > 展示记录合并前状态。
+
+- ```shell
+  git rerere diff
+  ```
+
+  > 显示解决方案的当前状态——开始解决前与解决后的样子。
+
+- ```shell
+  git rerere
+  ```
+
+  > 通过rerere来解决合并。
 
 ## 子模块
 
