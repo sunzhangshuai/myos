@@ -1682,26 +1682,94 @@ git bisect start HEAD {最后一次正常的提交}
 git bisect run {检查脚本}
 ```
 
-
-
 ## 子模块
 
-定义：子模块允许将一个git仓库作为另一个git仓库的子目录，将另一个仓库克隆到自己的项目中，同时还能保持提交的独立。
+子模块允许将一个git仓库作为另一个git仓库的子目录，将另一个仓库克隆到自己的项目中，同时还能保持提交的独立。
 
-使用步骤：
+### 添加
 
-1. 将一个已经存在的git仓库添加为正在工作的仓库的字模块
+```shell
+git submodule add {uri} [dirname]
+```
 
-   ```shell
-   git submodule add git仓库地址
-   ```
+> **默认**：子模块会将子项目放到一个与仓库同名的目录中。可通过 `dirname` 指定。
 
-2. .gitmodules文件：保存了项目url与已经拉取的本地目录之间的映射
+#### .gitmodules
 
-### 克隆含有子模块的项目
+保存了项目url与已经拉取的本地目录之间的映射。
 
-1. git clone git项目地址
-2. 子目录是空的，需要执行 git submodule init
+```shell
+[submodule "{name}"]
+      path = {name}
+      url = {uri}
+```
+
+> 可以执行 `git config submodule.{name}.url {url}` 进行url覆盖。
+
+### 检出
+
+```shell
+# pull会递归地抓取子模块的更改，但不会更新子模块。还需要 init && update
+git pull && git submodule init && git submodule update
+git pull && git submodule update --init [--recursive]
+```
+
+> `init`：初始化本地配置文件。
+>
+> `update`：从项目中抓取所有数据并检出父项目中列出的所有的提交。
+
+```shell
+git clone --recurse-submodules {uri}
+```
+
+> 自动初始化并更新仓库中的每一个子模块，包括可能存在的嵌套子模块。
+
+```shell
+git pull --recurse-submodules
+```
+
+> 拉取后运行 `update`，将子模块置为正确的状态。
+>
+> 可将 `submodule.recurse` 设置为 `true`，除 `clone` 外，自动更新子模块。
+
+```shell
+git submodule update --remote [uri]
+```
+
+> 没有uri会拉取全部最新的，可通过uri指定。
+>
+> 默认检出 **master** 分支。可通过 `git config -f .gitmodules submodule.{name}.branch {branchname}` 修改。
+
+### 提交子模块
+
+```shell
+# 主模块提交时检测子模块的改动是否推送，没有推送则失败。
+git push --recurse-submodules=check
+# 主模块提交时尝试推送子模块
+git push --recurse-submodules=on-demand
+```
+
+> `git config push.recurseSubmodules check` 可以将 `check` 设置为默认行为。
+
+### 技巧
+
+#### foreach
+
+```shell
+git submodule foreach 'git stash'
+```
+
+> 在每一个子模块运行命令。
+
+#### alias
+
+```shell
+git config alias.sdiff '!'"git diff && git submodule foreach 'git diff'"
+git config alias.spush 'push --recurse-submodules=on-demand'
+git config alias.supdate 'submodule update --remote --merge'
+```
+
+> 子模块的命令比较长，可以多使用别名。
 
 ## 打包
 
