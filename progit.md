@@ -998,7 +998,7 @@ ssh-keygen -o
   git log refA..refB
   ```
 
-  > 在 refA 分支中而不在 refB 分支中的提交
+  > 在 refB 分支中而不在 refA 分支中的提交
 
 - **多点**
 
@@ -1773,33 +1773,44 @@ git config alias.supdate 'submodule update --remote --merge'
 
 ## 打包
 
-网络传输git常用的方法：ssh，http
+> git可以将数据打包到一个二进制文件里，以邮箱等方式传输给其他人，然后解包到其他仓库中。
 
-git可以将它的数据打包到一个文件中。
-
-```shell
-# 将git push 命令所传输的所有内容打包成一个二进制文件，可以将文件传给其他人，然后解包到其他仓库中
-git bundle 
-```
+-  **打包整个仓库**
 
 ```shell
-示例：
-# 1. repo.bundle包含了所有重建该仓库master分支所需的数据
-# 如果希望这个仓库在别处被克隆，增加HEAD引用
 git bundle create repo.bundle HEAD MASTER
-# 2. 应用文件
-git clone repo.bundle repo [-b <branceName>]
 ```
 
-## 替换
-
-replace命令：在git
-
-## 凭证存储
+- **打包提交区间**
 
 ```shell
-# 密码存在缓存中
-git config --gobal credential.help cache [--timeout <senconds>]
-# 密码存在文件中
-git config --gobal credential.help 'store --file <path>'
+git bundle create repo.bundle refA..refB
 ```
+
+- **检查打包文件**
+
+```shell
+git bundle verfiy repo.bundle
+```
+
+- **查看要应用的是哪些提交**
+
+```shell
+git bundle list-heads repo.bundle
+git log --online refA..refB | refA ^refB
+```
+
+- **应用打包文件**
+
+```shell
+git fetch repo.bundle master::other-master
+git rebase other-master
+```
+
+# 个性化
+
+## 配置
+
+## 属性
+
+## 钩子
