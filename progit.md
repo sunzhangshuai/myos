@@ -102,76 +102,6 @@
 git --version
 ```
 
-# 配置
-
-设置控制 Git 外观和行为的配置变量。
-
-1. **配置文件**
-
-   - `/etc/gitconfig` 文件：包含系统上每一个用户及他们仓库的通用配置。`--system` 选项会读写该文件中的配置变量。
-
-   - `~/.gitconfig` 或 `~/.config/git/config` 文件：只针对当前用户。`--global` 选项会读写该文件中的配置变量。
-
-   - 项目中的 ` .git/config` 文件：针对该仓库。 默认用这个。`--local`。
-
-> 每个级别会覆盖上一级别的配置。
-
-2. **列表**
-
-   ```shell
-   git config --list --show-origin
-   ```
-
-3. **用户**
-
-   ```shell
-   git config [--local|--global|--system] user.name your_name
-   git config [--local|--global|--system] user.email XXX@XXX.com
-   ```
-
-   - 必须设置用户名和邮件地址。
-
-   - 会写入到每一次提交中，不可更改。
-
-4. **文本编辑器**
-
-   ```shell
-   git config --global core.editor 编辑器
-   ```
-
-   当 Git 需要你输入信息时会调用它。 如果未配置，Git 会使用操作系统默认的文本编辑器【Vim、Emacs、Notepad++】。 
-
-5. **别名**
-
-   ```shell
-   git config --global alias.co checkout
-   git config --global alias.br branch
-   git config --global alias.ci commit
-   git config --global alias.st status
-   git config --global alias.unstage 'reset HEAD --'
-   ```
-
-
-## 检查配置
-
-```shell
-git config --list [--local|--global|--system]
-```
-
-> 会看到重复的变量名，因为 Git 会从不同的文件中读取同一个配置。
-
-```shell
-git config <key>
-```
-
-> 检查某一项的配置
-
-```shell
-git config --show-origin <key>
-```
-
-> 重复时可以查看是在哪个文件中配置的该项值
-
 # 帮助
 
 ```shell
@@ -867,82 +797,48 @@ git log
 
 - 将提交在某一分支的所有修改都移动到另一个分支上
 
-- rebase原理
+- **原理**
 
-  - 找到两个分支的最近公共祖先
-  - 对比当前分支相对于该祖先的历次提交，提取相应的修改并存为临时文件。
-  - 将分支指向目标基底，依次将之前另存为临时文件的修改依序应用。
+  1. 找到两个分支的最近公共祖先。
 
-- rebase命令
+  2. 对比当前分支相对于该祖先的历次提交，提取相应的修改并存为临时文件。
 
-  ```shell
-  # 将目标基底分支分支变基到指定分支
-  git checkout <branch>
-  git rebase <目标分支>
-  # 目标分支快速合并
-  git checkout <目标分支>
-  git merge <指定分支>
-  ```
+  3. 将分支指向目标基底，依次将之前另存为临时文件的修改依序应用。
 
-- rebase实例
+- **命令**：`git rebase {branchName}`
 
-  ```shell
-  # master主分支，sever为从master拉取的主题分支，client为从server拉取的分支
-  # 只合并client到master
-  git rebase --onto master server client
-  git checkout master
-  git merge client
-  # 将server合并到master
-  git rebase master server
-  git checkout master
-  git merge server
-  ```
-
-- 风险
+- **风险**
+  
   - 如果提交在你的仓库之外，而别人可能基于这些提交进行开发，那么不要执行变基。
-  - 解决办法：用变基解决变基
-
-- 变基和合并的区别
-  - 变基：整理合并提交历史
-  - 合并：保留所有的提交记录
+  - 解决办法：用变基解决变基。
+  
+- **变基和合并的区别**
+  
+  - *变基*：整理合并提交历史。
+  - *合并*：保留所有的提交记录。
 
 # GITHUB
 
 ## 公钥
 
-```Ssh
-ssh-keygen -o
-```
-
-> 生成公钥
-
-```Ssh
-~/.ssh/id_rsa.pub
-```
-
-> 公钥位置
+- **生成公钥**：`ssh-keygen -o`。
+- **位置**：`~/.ssh/id_rsa.pub`。
 
 ## 特殊文件
 
-- **readme**
+- **readme**：可以是 README ，README.md， README.asciidoc。
 
-  > 可以是 README ，README.md， README.asciidoc。
+  - 项目作用
 
-  - 一般包含这些内容。
+  - 配置与安装
 
-    > • 该项目的作用
-    >
-    > • 如何配置与安装
-    >
-    > • 有关如何使用和运行的例子
-    >
-    > • 项目的许可证 
-    >
-    > • 如何向项目贡献力量
-
--  **CONTRIBUTING**
-
-  > 当有人开启一个合并请求时 GitHub 会显示。
+  - 如何使用、运行demo
+  
+  - 许可证 
+  
+  - 如何向项目贡献力量
+  
+- **CONTRIBUTING**：当有人开启一个合并请求时 GitHub 会显示。
 
 # GIT命令
 
@@ -1206,7 +1102,7 @@ git clean -x -[i/f/n]
 
   ```shell
   # 查看公钥和其签名
-  gpg -k --list-sigs
+  gpg -K --list-sigs
   
   # 查看私钥和其签名
   gpg -K --list-sigs
@@ -1539,7 +1435,7 @@ git reset --hard HEAD
 
 ##### 手动文件合并
 
-1. 获取三个版本的文件，三版本文件查找方式。`1: 共同祖先`、`2: 当前分支版本`、`3: 要merge的版本`。
+1. 获取三版本文件。**三版本文件查找方式**：`1: 共同祖先`、`2: 当前分支版本`、`3: 要merge的版本`。
 
    1. ```shell
       git ls-files -u
@@ -1565,7 +1461,7 @@ git reset --hard HEAD
 
 3. 分别处理版本文件。
 
-4. 执行`git merge-file`。
+4. 执行 `git merge-file`。
 
    ```shell
    git merge-file -p hello.ours.rb hello.common.rb hello.theirs.rb > hello.rb
@@ -1604,15 +1500,15 @@ git reset --hard HEAD~
 git revert -m 1 HEAD
 ```
 
-> `-m`：**mainline**，表明需要被保留的父节点。`1：当前分支`、`2：merge分支`。
->
-> **实际效果**：<img src="./imgs/撤销合并.png" alt="image-20221126233927083" style="zoom:50%;" />
->
+- `-m`：**mainline**，表明需要被保留的父节点。`1：当前分支`、`2：merge分支`。
+
+- **实际效果**：<img src="./imgs/撤销合并.png" alt="image-20221126233927083" style="zoom:40%;" />
+
 > **缺点**：topic分支上的历史提交无法再被合入master。
 
 ## Rerere
 
-> **reuse recorded resolution**【重用记录的解决方案】：让git记住解决一个块冲突的方法，下一次遇到相同的冲突时，git可以自动解决。
+**reuse recorded resolution**【重用记录的解决方案】：让git记住解决一个块冲突的方法，下一次遇到相同的冲突时，git可以自动解决。
 
 ### 启动
 
@@ -1631,23 +1527,16 @@ git config --global rerere.enabled true
 
 ### 相关命令
 
-- ```shell
-  git rerere status
-  ```
+```shell
+# 展示记录合并前状态。
+git rerere status
 
-  > 展示记录合并前状态。
+# 显示解决方案的当前状态——开始解决前与解决后的样子。
+git rerere diff
 
-- ```shell
-  git rerere diff
-  ```
-
-  > 显示解决方案的当前状态——开始解决前与解决后的样子。
-
-- ```shell
-  git rerere
-  ```
-
-  > 通过rerere来解决合并。
+# 通过rerere来解决合并。
+git rerere
+```
 
 ## 调试工具
 
@@ -1718,37 +1607,39 @@ git submodule add {uri} [dirname]
 
 ### 检出
 
+有四种检出方式。
+
 ```shell
 # pull会递归地抓取子模块的更改，但不会更新子模块。还需要 init && update
 git pull && git submodule init && git submodule update
 git pull && git submodule update --init [--recursive]
 ```
 
-> `init`：初始化本地配置文件。
->
-> `update`：从项目中抓取所有数据并检出父项目中列出的所有的提交。
+- `init`：初始化本地配置文件。
+
+- `update`：从项目中抓取所有数据并检出父项目中列出的所有的提交。
 
 ```shell
 git clone --recurse-submodules {uri}
 ```
 
-> 自动初始化并更新仓库中的每一个子模块，包括可能存在的嵌套子模块。
+自动初始化并更新仓库中的每一个子模块，包括可能存在的嵌套子模块。
 
 ```shell
 git pull --recurse-submodules
 ```
 
-> 拉取后运行 `update`，将子模块置为正确的状态。
->
-> 可将 `submodule.recurse` 设置为 `true`，除 `clone` 外，自动更新子模块。
+- 拉取后运行 `update`，将子模块置为正确的状态。
+
+- 可将 `submodule.recurse` 设置为 `true`，除 `clone` 外，自动更新子模块。
 
 ```shell
 git submodule update --remote [uri]
 ```
 
-> 没有uri会拉取全部最新的，可通过uri指定。
->
-> 默认检出 **master** 分支。可通过 `git config -f .gitmodules submodule.{name}.branch {branchname}` 修改。
+- 没有uri会拉取全部最新的，可通过uri指定。
+
+- 默认检出 **master** 分支。可通过 `git config -f .gitmodules submodule.{name}.branch {branchname}` 修改。
 
 ### 提交子模块
 
@@ -1817,10 +1708,123 @@ git fetch repo.bundle master::other-master
 git rebase other-master
 ```
 
-# 个性化
+# 自定义
 
 ## 配置
 
+- **配置文件**
+
+  - `/etc/gitconfig`：含有系统里每位用户及他们所拥有的仓库的配置值。 **--system**
+  - `~/.gitconfig` 或 `~/.config/git/config`：只针对当前用户。 **--global**
+  - `obj/.git/config`：**默认**，只针对该仓库。  **--local**
+
+- **必须项**：会写入到每一次提交中，不可更改。
+
+  ```shell
+  git config [--local|--global|--system] user.name your_name
+  git config [--local|--global|--system] user.email XXX@XXX.com
+  ```
+
+- **查看配置**
+
+  ```shell
+  git config --list [--local|--global|--system] [--show-origin]
+  git config [--show-origin] {key}
+  ```
+
+  - `--local|--global|--system`：只显示特定域的配置。
+  - `--show-origin`：显示作用域。
+  - `key`：显示特定key的配置。
+
+### 客户端配置
+
+- **core.editor**：修改默认编辑器，默认 `vi` 。
+- **core.excludesfile**：加入额外的忽略文件。即全局生效的 `.gitignore`。
+- **core.pager**：运行 **log** 和 **diff** 等命令使用的分页器。默认 `less` 。
+- **core.autocrlf**：用来处理 mac 和 windows 上的换行问题。
+  - `true`： 在检出代码时，换行会被转换成回车和换行。
+  - `input`：在提交时把回车和换行转换成换行。
+  - `false`：**默认**，不转换。
+- **core.whitespace**：探测和修正多余空白字符问题。
+  - `blank-at-eol`：行尾的空格，**默认打开**。
+  - `blank-at-eof`：文件底部的空行，**默认打开**。
+  - `space-before-tab`：tab前的空格，**默认打开**。
+  - `indent-with-non-tab`：以空格而非 tab 开头的行。**默认关闭**。
+  - `tab-in-indent`：行头表示缩进的 tab。
+  - `cr-at-eol`：忽略行尾的回车。
+- **commit.template**：指定文件路径作为提交的默认初始化信息。
+- **commit.gpgsign**：提交时自动使用 **GPG** 签署。
+- **user.signingkey**：设置要签署的秘钥。
+- **help.autocorrect**：当命令出错时，自动运行命令， **`value * 0.1` 为等待的秒数**。
+- **color.ui**：Git 会自动着色大部分输出内容。
+  - `auto`：**默认**，终端带色，管道或重定向不带色。
+  - `false`： 关掉 Git 的终端颜色输出。
+  - `always`： 全带色。
+- **merge.tool**：修改git的合并工具。
+- **mergetool.extMerge.cmd**：规定合并工具的运行方式。
+- **diff.external**：通知 Git 该用什么命令做比较。
+
+### 服务端配置
+
+- **receive.fsckObjects**：在每次推送时都要求Git 检查一致性。这个操作**很耗时间**，很有可能会拖慢提交的过程。
+- **receive.denyNonFastForwards**：禁用强制更新推送。
+- **receive.denyDeletes**：禁止通过推送删除分支和标签。
+
 ## 属性
+
+针对特定的路径配置某些设置项，这样 Git 就只对特定的子目录或子文件集运用它们。
+
+- **配置文件**：
+  - 提交远程：`.gitattributes`。
+  - 本地生效：`.git/info/attributes`。
+
+### 二进制文件
+
+不会处理 CRLF 问题，也不比较和打印文件变化。
+
+- **识别**
+
+  ```shell
+  *.pbxproj binary
+  ```
+
+- **比较**
+
+  ```shell
+  # 对 doc 文件使用 word 过滤器。
+  *.docx diff=word
+  
+  # 对 png 使用 exif 过滤器。
+  *.png diff=exif
+  ```
+
+- **配置过滤器**
+
+  ```shell
+  # 配置过滤器的执行脚本
+  diff.word.textconv docx2txt
+  diff.exif.textconv exiftool
+  ```
+
+### 关键字展开
+
+可以在检出某个文件后对其注入文本，并在再次提交前删除这些文本。
+
+- **注入**：checkout 时会对文件注入变量。
+
+  ```shell
+  ## 识别需要注入的文件
+  *.txt ident
+  ```
+
+### 合并策略
+
+```shell
+# 制定合并策略
+database.xml merge=ours
+
+# 配置策略
+git config --global merge.ours.driver true
+```
 
 ## 钩子
